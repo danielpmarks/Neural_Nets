@@ -21,6 +21,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+
 class NeuralNet(nn.Module):
     def __init__(self, lrate, loss_fn, in_size, out_size):
         """
@@ -35,9 +36,21 @@ class NeuralNet(nn.Module):
         @param out_size: output dimension
         """
         super(NeuralNet, self).__init__()
-        self.loss_fn = loss_fn
-        raise NotImplementedError("You need to write this part!")
 
+        self.conv1 = nn.Conv2d(3, 6, 3)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.leaky = nn.LeakyReLU()
+        self.pool = nn.MaxPool2d(2, 2)
+        self.loss_fn = loss_fn
+
+        self.fc1 = nn.Linear(16*5*5, 256)
+        self.fc2 = nn.Linear(256, 32)
+        self.fc3 = nn.Linear(32, out_size)
+        self.dropout = nn.Dropout(p=0.2)
+
+        self.relu = nn.ReLU()
+
+        self.optimizer = optim.SGD(self.parameters(), lr=lrate)
 
     def forward(self, x):
         """Performs a forward pass through your neural net (evaluates f(x)).
@@ -45,10 +58,24 @@ class NeuralNet(nn.Module):
         @param x: an (N, in_size) Tensor
         @return y: an (N, out_size) Tensor of output from the network
         """
-        raise NotImplementedError("You need to write this part!")
-        return torch.ones(x.shape[0], 1)
+        conv1 = self.conv1(torch.reshape(x, (-1, 3, 32, 32)))
+        act1 = self.leaky(conv1)
+        pool1 = self.pool(act1)
 
-    def step(self, x,y):
+        conv2 = self.conv2(pool1)
+        act2 = self.leaky(conv2)
+        pool2 = self.pool(act2)
+
+        shaped = pool2.view(-1, 16*5*5)
+        out = self.relu(self.fc1(shaped))
+        out = self.dropout(out)
+        out = self.relu(self.fc2(out))
+        out = self.dropout(out)
+        out = self.fc3(out)
+
+        return out
+
+    def step(self, x, y):
         """
         Performs one gradient step through a batch of data x with labels y.
 
@@ -56,10 +83,17 @@ class NeuralNet(nn.Module):
         @param y: an (N,) Tensor
         @return L: total empirical risk (mean of losses) at this timestep as a float
         """
-        raise NotImplementedError("You need to write this part!")
-        return 0.0
+        self.optimizer.zero_grad()
+        y_pred = self.forward(x)
+        # print(y_pred)
+        # print(y)
+        loss = self.loss_fn(y_pred, y)
+        loss.backward()
+        self.optimizer.step()
+        return loss.item()
 
-def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
+
+def fit(train_set, train_labels, dev_set, n_iter, batch_size=100):
     """ Make NeuralNet object 'net' and use net.step() to train a neural net
     and net(x) to evaluate the neural net.
 
@@ -79,5 +113,29 @@ def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
     @return yhats: an (M,) NumPy array of binary labels for dev_set
     @return net: a NeuralNet object
     """
-    raise NotImplementedError("You need to write this part!")
-    return [],[],None
+    loss_fn = nn.CrossEntropyLoss()
+    net = NeuralNet(0.01, loss_fn, 3072, 2)
+
+    train_set = (train_set - train_set.mean())/train_set.std()
+    dev_set = (dev_set - dev_set.mean())/dev_set.std()
+
+    losses = []
+    epochs = 20
+    for epoch in range(epochs):
+        start = 0
+        for i in range(n_iter):
+            losses.append(net.step(train_set[start:start+batch_size],
+                                   train_labels[start:start+batch_size]))
+            start += batch_size
+
+    outputs = []
+    for dev in dev_set:
+        out = net.forward(dev)
+        # print(out)
+        outputs.append(out)
+    yhats = []
+
+    for out in outputs:
+        yhats.append(True if out[0][1] > out[0][0] else False)
+    # print(yhats)
+    return losses, yhats, None
