@@ -114,7 +114,7 @@ def fit(train_set, train_labels, dev_set, n_iter, batch_size=100):
     @return net: a NeuralNet object
     """
     loss_fn = nn.CrossEntropyLoss()
-    net = NeuralNet(0.015, loss_fn, 3072, 2)
+    net = NeuralNet(0.03, loss_fn, 3072, 2)
 
     train_set = (train_set - train_set.mean())/train_set.std()
     dev_set = (dev_set - dev_set.mean())/dev_set.std()
@@ -122,11 +122,11 @@ def fit(train_set, train_labels, dev_set, n_iter, batch_size=100):
     losses = []
     epochs = 20
     for epoch in range(epochs):
-        start = 0
+
         for i in range(n_iter):
+            start = int(np.random.random_sample()*len(train_set))
             losses.append(net.step(train_set[start:start+batch_size],
                                    train_labels[start:start+batch_size]))
-            start += batch_size
 
     outputs = []
     for dev in dev_set:
