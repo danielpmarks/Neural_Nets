@@ -114,7 +114,7 @@ def fit(train_set, train_labels, dev_set, n_iter, batch_size=100):
     @return net: a NeuralNet object
     """
     loss_fn = nn.CrossEntropyLoss()
-    net = NeuralNet(0.01, loss_fn, 3072, 2)
+    net = NeuralNet(0.015, loss_fn, 3072, 2)
 
     train_set = (train_set - train_set.mean())/train_set.std()
     dev_set = (dev_set - dev_set.mean())/dev_set.std()
@@ -138,4 +138,4 @@ def fit(train_set, train_labels, dev_set, n_iter, batch_size=100):
     for out in outputs:
         yhats.append(True if out[0][1] > out[0][0] else False)
     # print(yhats)
-    return losses, yhats, None
+    return losses, yhats, net
